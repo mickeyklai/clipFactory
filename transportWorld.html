@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transport World - Kids Video Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.0.0/dist/pixi.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #87CEEB 0%, #E0F6FF 50%, #87CEEB 100%);
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            position: relative;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        
+        #startButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+        
+        #startButton:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.4);
+        }
+        
+        #startButton:active {
+            transform: translate(-50%, -50%) scale(0.95);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        #title {
+            color: #2C3E50;
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        #currentScene {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #2C3E50;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="title">🚗 Transport World 🚂</h1>
+    <p style="color: #2C3E50; text-align: center; margin: 5px;">
+        <strong>Instructions:</strong> 1) Click "Start Adventure!" 2) Allow audio permissions 3) Watch the animated vehicles!
+        <br><small>🎵 Add classic_soft.mp3 to /music/ folder for background music | 💡 Open console (F12) for debug info</small>
+    </p>
+    <div id="gameContainer">
+        <button id="startButton">▶️ Start Adventure!</button>
+        <div id="currentScene" class="hidden">Loading...</div>
+    </div>
+
+    <script>
+        // ===== GLOBAL VARIABLES =====
+        let app;
+        let currentScript = null;
+        let currentSceneIndex = 0;
+        let currentTextIndex = 0;
+        let isPlaying = false;
+        let vehicleSprite = null;
+        let backgroundContainer = null;
+        let textDisplay = null;
+        let clouds = [];
+
+        // Audio settings
+        let backgroundMusic = null;
+        let musicLoaded = false;
+
+        // Text-to-Speech settings
+        let speechSynth = window.speechSynthesis;
+        let currentVoice = null;
+
+        // ===== INITIALIZATION =====
+        async function initializeApp() {
+            try {
+                console.log('🚀 Initializing PIXI Application...');
+                console.log('PIXI version:', PIXI.VERSION);
+                
+                // Check if PIXI is available
+                if (typeof PIXI === 'undefined') {
+                    throw new Error('PIXI.js library failed to load');
+                }
+
+                // Try modern v8 initialization first
+                try {
+                    app = new PIXI.Application();
+                    
+                    await app.init({
+                        width: 1200,
+                        height: 800,
+                        backgroundColor: 0x87CEEB,
+                        antialias: true
+                    });
+
+                    console.log('✅ PIXI v8 initialization successful');
+                } catch (v8Error) {
+                    console.log('⚠️ v8 init failed, trying legacy method:', v8Error.message);
+                    
+                    // Fallback to legacy initialization for older PIXI versions
+                    app = new PIXI.Application({
+                        width: 1200,
+                        height: 800,
+                        backgroundColor: 0x87CEEB,
+                        antialias: true
+                    });
+                    
+                    console.log('✅ PIXI legacy initialization successful');
+                }
+
+                // Add canvas to container - check both possible canvas references
+                const canvas = app.canvas || app.view;
+                if (!canvas) {
+                    throw new Error('No canvas element found in PIXI application');
+                }
+
+                document.getElementById('gameContainer').appendChild(canvas);
+                console.log('✅ Canvas added to DOM');
+
+                // Setup background
+                createBackground();
+
+                // Setup voice
+                setupVoice();
+
+                // Setup background music
+                setupBackgroundMusic();
+
+                // Add start button event
+                document.getElementById('startButton').addEventListener('click', startPresentation);
+
+                console.log('🎮 Transport World initialized successfully!');
+            } catch (error) {
+                console.error('❌ Error initializing PIXI:', error);
+                
+                // Show error message to user
+                const errorMsg = document.createElement('div');
+                errorMsg.innerHTML = `
+                    <div style="color: red; text-align: center; padding: 20px; background: rgba(255,255,255,0.9); border-radius: 10px; margin: 20px;">
+                        <h3>⚠️ Error Loading Graphics Engine</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p>Please try:</p>
+                        <ul style="text-align: left;">
+                            <li>Refresh the page (F5 or Ctrl+R)</li>
+                            <li>Check your internet connection</li>
+                            <li>Try a different browser (Chrome, Firefox, Safari)</li>
+                            <li>Disable ad blockers temporarily</li>
+                        </ul>
+                        <button onclick="location.reload()" style="padding: 10px 20px; margin-top: 10px; cursor: pointer;">🔄 Refresh Page</button>
+                    </div>
+                `;
+                document.getElementById('gameContainer').appendChild(errorMsg);
+            }
+        }
+
+        // ===== BACKGROUND SETUP =====
+        function createBackground() {
+            backgroundContainer = new PIXI.Container();
+            app.stage.addChild(backgroundContainer);
+
+            // Create gradient background
+            const gradient = new PIXI.Graphics();
+            gradient.beginFill(0x87CEEB);
+            
+            // Use renderer dimensions for compatibility
+            const width = app.renderer?.width || app.screen?.width || 1200;
+            const height = app.renderer?.height || app.screen?.height || 800;
+            
+            gradient.drawRect(0, 0, width, height);
+            gradient.endFill();
+            backgroundContainer.addChild(gradient);
+
+            // Create animated clouds
+            createClouds();
+
+            console.log('🌤️ Background created with animated clouds');
+        }
+
+        function createClouds() {
+            const cloudCount = 5;
+            
+            for (let i = 0; i < cloudCount; i++) {
+                const cloud = new PIXI.Graphics();
+                
+                // Draw cloud shape
+                cloud.beginFill(0xFFFFFF, 0.7);
+                cloud.drawCircle(0, 0, 40);
+                cloud.drawCircle(35, 0, 30);
+                cloud.drawCircle(-35, 0, 30);
+                cloud.drawCircle(15, -20, 25);
+                cloud.drawCircle(-15, -20, 25);
+                cloud.endFill();
+
+                // Position clouds randomly
+                cloud.x = Math.random() * app.screen.width;
+                cloud.y = 50 + Math.random() * 200;
+                cloud.scale.set(0.5 + Math.random() * 0.5);
+
+                backgroundContainer.addChild(cloud);
+                clouds.push({
+                    sprite: cloud,
+                    speed: 0.2 + Math.random() * 0.3
+                });
+            }
+
+            // Animate clouds
+            app.ticker.add(animateClouds);
+        }
+
+        function animateClouds() {
+            clouds.forEach(cloud => {
+                cloud.sprite.x += cloud.speed;
+                
+                // Reset cloud position when it goes off screen
+                if (cloud.sprite.x > app.screen.width + 100) {
+                    cloud.sprite.x = -100;
+                    cloud.sprite.y = 50 + Math.random() * 200;
+                }
+            });
+        }
+
+        // ===== BACKGROUND MUSIC SETUP =====
+        function setupBackgroundMusic() {
+            try {
+                console.log('🎵 Setting up background music...');
+                
+                // Create audio element for background music
+                backgroundMusic = new Audio();
+                backgroundMusic.preload = 'auto';
+                backgroundMusic.loop = true;
+                backgroundMusic.volume = 0.3; // Quiet background music for narration clarity
+                
+                // Set up event listeners
+                backgroundMusic.addEventListener('canplaythrough', () => {
+                    console.log('✅ Background music loaded and ready');
+                    musicLoaded = true;
+                });
+                
+                backgroundMusic.addEventListener('error', (e) => {
+                    console.warn('⚠️ Background music failed to load:', e);
+                    musicLoaded = false;
+                });
+
+                backgroundMusic.addEventListener('ended', () => {
+                    console.log('🎵 Background music ended, restarting...');
+                    if (isPlaying) {
+                        backgroundMusic.currentTime = 0;
+                        backgroundMusic.play().catch(e => console.warn('Music restart failed:', e));
+                    }
+                });
+
+                // We'll load the actual music file when script is loaded
+                console.log('🎵 Background music system ready');
+                
+            } catch (error) {
+                console.error('❌ Error setting up background music:', error);
+                musicLoaded = false;
+            }
+        }
+
+        async function loadBackgroundMusic(musicPath) {
+            if (!backgroundMusic || !musicPath) {
+                console.warn('⚠️ No background music or path specified');
+                return false;
+            }
+
+            try {
+                console.log(`🎵 Loading background music: ${musicPath}`);
+                
+                // Set the source
+                backgroundMusic.src = musicPath;
+                
+                // Try to load the music
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Music loading timeout'));
+                    }, 5000); // 5 second timeout
+
+                    backgroundMusic.addEventListener('canplaythrough', () => {
+                        clearTimeout(timeout);
+                        resolve();
+                    }, { once: true });
+
+                    backgroundMusic.addEventListener('error', (e) => {
+                        clearTimeout(timeout);
+                        reject(e);
+                    }, { once: true });
+
+                    backgroundMusic.load();
+                });
+
+                musicLoaded = true;
+                console.log('✅ Background music loaded successfully');
+                return true;
+
+            } catch (error) {
+                console.warn('⚠️ Could not load background music:', error.message);
+                musicLoaded = false;
+                return false;
+            }
+        }
+
+        function startBackgroundMusic() {
+            if (!backgroundMusic || !musicLoaded) {
+                console.warn('⚠️ Background music not available');
+                return;
+            }
+
+            try {
+                backgroundMusic.currentTime = 0;
+                const playPromise = backgroundMusic.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            console.log('🎵 Background music started');
+                        })
+                        .catch(error => {
+                            console.warn('⚠️ Background music play failed (user interaction required):', error);
+                            // This is normal - browsers require user interaction before audio can play
+                        });
+                }
+            } catch (error) {
+                console.warn('⚠️ Error starting background music:', error);
+            }
+        }
+
+        function stopBackgroundMusic() {
+            if (backgroundMusic && !backgroundMusic.paused) {
+                backgroundMusic.pause();
+                console.log('🎵 Background music stopped');
+            }
+        }
+
+        // ===== VOICE SETUP =====
+        function setupVoice() {
+            // Wait for voices to load
+            if (speechSynth.getVoices().length === 0) {
+                speechSynth.addEventListener('voiceschanged', selectBestVoice);
+            } else {
+                selectBestVoice();
+            }
+        }
+
+        function selectBestVoice() {
+            const voices = speechSynth.getVoices();
+            
+            // Prefer child-friendly English voices
+            const preferredVoices = [
+                'Google UK English Female',
+                'Microsoft Zira - English (United States)',
+                'Alex',
+                'Samantha',
+                'Victoria'
+            ];
+
+            for (let preferred of preferredVoices) {
+                currentVoice = voices.find(voice => voice.name.includes(preferred));
+                if (currentVoice) break;
+            }
+
+            // Fallback to any English voice
+            if (!currentVoice) {
+                currentVoice = voices.find(voice => voice.lang.startsWith('en'));
+            }
+
+            console.log('🎤 Voice selected:', currentVoice?.name || 'Default');
+        }
+
+        // ===== SCRIPT LOADING =====
+        async function loadScript() {
+            try {
+                const response = await fetch('scripts/transport_episode_1.json');
+                if (!response.ok) {
+                    throw new Error(`Failed to load script: ${response.status}`);
+                }
+                currentScript = await response.json();
+                console.log('📜 Script loaded:', currentScript.title);
+
+                // Load background music if specified
+                if (currentScript.background_music) {
+                    console.log('🎵 Loading background music from script...');
+                    await loadBackgroundMusic(currentScript.background_music);
+                }
+
+                return true;
+            } catch (error) {
+                console.error('❌ Error loading script:', error);
+                alert('Could not load the video script. Please check that scripts/transport_episode_1.json exists.');
+                return false;
+            }
+        }
+
+        // ===== PRESENTATION CONTROL =====
+        async function startPresentation() {
+            if (isPlaying) return;
+
+            console.log('🚀 User clicked Start Adventure!');
+
+            // Show loading state
+            document.getElementById('startButton').textContent = '⏳ Loading...';
+            document.getElementById('startButton').style.background = 'linear-gradient(45deg, #95a5a6, #7f8c8d)';
+
+            // Load script
+            const scriptLoaded = await loadScript();
+            if (!scriptLoaded) {
+                document.getElementById('startButton').textContent = '❌ Error - Try Again';
+                document.getElementById('startButton').style.background = 'linear-gradient(45deg, #e74c3c, #c0392b)';
+                setTimeout(() => {
+                    document.getElementById('startButton').textContent = '▶️ Start Adventure!';
+                    document.getElementById('startButton').style.background = 'linear-gradient(45deg, #FF6B6B, #4ECDC4)';
+                }, 2000);
+                return;
+            }
+
+            // Hide start button and show scene indicator
+            document.getElementById('startButton').classList.add('hidden');
+            document.getElementById('currentScene').classList.remove('hidden');
+
+            isPlaying = true;
+            currentSceneIndex = 0;
+
+            // Start background music
+            startBackgroundMusic();
+            
+            console.log('🎬 Starting presentation with', currentScript.scenes.length, 'scenes');
+            playCurrentScene();
+        }
+
+        async function playCurrentScene() {
+            if (!currentScript || currentSceneIndex >= currentScript.scenes.length) {
+                endPresentation();
+                return;
+            }
+
+            const scene = currentScript.scenes[currentSceneIndex];
+            console.log(`🎭 Playing scene: ${scene.id}`);
+
+            // Update scene indicator
+            document.getElementById('currentScene').textContent = 
+                `Scene ${currentSceneIndex + 1}/${currentScript.scenes.length}: ${scene.object}`;
+
+            // Clear previous vehicle
+            if (vehicleSprite) {
+                app.stage.removeChild(vehicleSprite);
+                vehicleSprite = null;
+            }
+
+            // Create vehicle sprite from image
+            await createVehicleSprite(scene);
+
+            // Play text lines for this scene
+            currentTextIndex = 0;
+            playNextLine(scene);
+        }
+
+        async function createVehicleSprite(scene) {
+            try {
+                console.log(`🖼️ Loading image for: ${scene.object}`);
+                
+                // Get the image path from the scene data
+                const imagePath = scene.image;
+                
+                if (!imagePath) {
+                    console.warn(`⚠️ No image path found for ${scene.object}, using fallback`);
+                    createFallbackGraphic(scene.object);
+                    return;
+                }
+
+                console.log(`📁 Loading: ${imagePath}`);
+
+                // Load the image using PIXI Assets
+                let texture;
+                try {
+                    texture = await PIXI.Assets.load(imagePath);
+                    console.log(`✅ Image loaded successfully: ${imagePath}`);
+                } catch (imageError) {
+                    console.warn(`⚠️ Failed to load image ${imagePath}, trying SVG fallback:`, imageError.message);
+                    // Try SVG fallback
+                    const svgPath = imagePath.replace('.png', '.svg');
+                    try {
+                        texture = await PIXI.Assets.load(svgPath);
+                        console.log(`✅ SVG fallback loaded: ${svgPath}`);
+                    } catch (svgError) {
+                        console.error(`❌ Both PNG and SVG failed for ${scene.object}:`, svgError.message);
+                        createFallbackGraphic(scene.object);
+                        return;
+                    }
+                }
+
+                // Create sprite from loaded texture
+                vehicleSprite = new PIXI.Sprite(texture);
+                
+                // Set anchor to center for proper positioning and rotation
+                vehicleSprite.anchor.set(0.5);
+                
+                // Scale the sprite to appropriate size (smaller, more reasonable size)
+                const targetWidth = 120; // Smaller size - more appropriate for kids content
+                const scale = targetWidth / vehicleSprite.width;
+                vehicleSprite.baseScale = scale; // Store base scale for animations
+                
+                // Position vehicle
+                vehicleSprite.x = app.screen.width / 2;
+                vehicleSprite.y = app.screen.height / 2 + 50;
+                vehicleSprite.scale.set(0); // Start invisible for animation
+
+                app.stage.addChild(vehicleSprite);
+                console.log(`🎭 Vehicle sprite created and added to stage: ${scene.object}`);
+
+                // Animate vehicle entrance
+                animateVehicleEntrance();
+                
+            } catch (error) {
+                console.error(`❌ Error creating vehicle sprite:`, error);
+                createFallbackGraphic(scene.object);
+            }
+        }
+
+        function createFallbackGraphic(vehicleType) {
+            console.log(`🎨 Creating fallback graphic for: ${vehicleType}`);
+            
+            // Create a simple colored rectangle as fallback
+            const graphics = new PIXI.Graphics();
+            
+            // Vehicle-specific colors
+            const colors = {
+                'car': 0xFF6B6B,
+                'bus': 0xFFD93D,
+                'train': 0x6BCF7F,
+                'airplane': 0x4ECDC4,
+                'police car': 0x4D79FF,
+                'fire truck': 0xFF4757,
+                'ambulance': 0xFFFFFF
+            };
+
+            const color = colors[vehicleType] || 0xFF6B6B;
+            
+            // Draw simple vehicle shape
+            graphics.beginFill(color);
+            graphics.lineStyle(3, 0x2C3E50);
+            graphics.drawRoundedRect(-100, -40, 200, 80, 10);
+            graphics.endFill();
+            
+            // Add simple details
+            graphics.beginFill(0x74B9FF);
+            graphics.drawRoundedRect(-60, -25, 120, 25, 5);
+            graphics.endFill();
+
+            vehicleSprite = graphics;
+            vehicleSprite.baseScale = 1; // Store base scale for animations
+            vehicleSprite.x = app.screen.width / 2;
+            vehicleSprite.y = app.screen.height / 2 + 50;
+            vehicleSprite.scale.set(0);
+
+            app.stage.addChild(vehicleSprite);
+            animateVehicleEntrance();
+        }
+
+        function animateVehicleEntrance() {
+            if (!vehicleSprite) return;
+
+            console.log('🎬 Starting vehicle entrance animation');
+
+            // Start off-screen to the left
+            vehicleSprite.x = -200;
+            vehicleSprite.scale.set(0.1);
+            vehicleSprite.rotation = -0.2;
+
+            // Animate to center with dramatic effect
+            const targetX = app.screen.width / 2;
+            const finalScale = vehicleSprite.baseScale || 1;
+            const duration = 1500; // Longer duration for more visible animation
+            const startTime = Date.now();
+
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Use different easing for different properties
+                const bounceProgress = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+                const slideProgress = progress < 0.7 ? progress / 0.7 : 1; // Slide in first 70%
+                
+                // Slide in from left
+                vehicleSprite.x = -200 + (targetX + 200) * slideProgress;
+                
+                // Scale up with bounce - use correct final scale
+                const maxScale = progress < 0.8 ? finalScale * 1.2 : finalScale * (1.2 - (progress - 0.8) * 1); // Overshoot then settle to correct size
+                vehicleSprite.scale.set(0.1 + (maxScale - 0.1) * bounceProgress);
+                
+                // Rotate to upright
+                vehicleSprite.rotation = -0.2 + (0.2 * bounceProgress);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Final bounce settle - use correct base scale
+                    vehicleSprite.scale.set(finalScale);
+                    vehicleSprite.rotation = 0;
+                    vehicleSprite.x = targetX;
+                    console.log('✅ Vehicle entrance animation complete, scale:', finalScale);
+                }
+            };
+
+            animate();
+        }
+
+        function playNextLine(scene) {
+            if (currentTextIndex >= scene.text.length) {
+                console.log('📋 Scene completed, moving to next scene in 1.5 seconds');
+                // Scene completed, move to next scene
+                setTimeout(() => {
+                    currentSceneIndex++;
+                    playCurrentScene();
+                }, 1500);
+                return;
+            }
+
+            const text = scene.text[currentTextIndex];
+            console.log(`🗣️ Speaking line ${currentTextIndex + 1}/${scene.text.length}: "${text}"`);
+
+            // Update scene indicator to show current text
+            document.getElementById('currentScene').textContent = 
+                `${scene.object.toUpperCase()}: "${text}" (${currentTextIndex + 1}/${scene.text.length})`;
+
+            // Handle special interactions based on text content
+            if (text.toLowerCase().includes('where is')) {
+                // Before asking "where is", hide the vehicle
+                console.log('🙈 Hiding vehicle for "where is" question');
+                hideVehicleBehindClouds(() => {
+                    speak(text, () => {
+                        currentTextIndex++;
+                        setTimeout(() => playNextLine(scene), 1200); // Longer pause for suspense
+                    });
+                });
+            } else if (text.toLowerCase().includes('here is')) {
+                // For "here is", reveal the vehicle dramatically
+                console.log('🎭 Revealing vehicle for "here is" answer');
+                revealVehicleFromClouds(() => {
+                    speak(text, () => {
+                        console.log('✅ Speech completed, starting idle animation');
+                        if (vehicleSprite) {
+                            addVehicleIdleAnimation();
+                        }
+                        currentTextIndex++;
+                        setTimeout(() => playNextLine(scene), 800);
+                    });
+                });
+            } else {
+                // Normal speech for other lines
+                speak(text, () => {
+                    console.log('✅ Speech completed, starting idle animation');
+                    if (vehicleSprite) {
+                        addVehicleIdleAnimation();
+                    }
+                    currentTextIndex++;
+                    setTimeout(() => playNextLine(scene), 800);
+                });
+            }
+        }
+
+        function addVehicleIdleAnimation() {
+            if (!vehicleSprite) return;
+
+            console.log('🎭 Starting vehicle idle animation');
+
+            // More visible floating and breathing animation
+            const baseY = vehicleSprite.y;
+            const baseScale = vehicleSprite.baseScale || vehicleSprite.scale.x; // Use stored base scale
+            let animationTime = 0;
+
+            const animate = () => {
+                if (!vehicleSprite || !isPlaying) return;
+
+                animationTime += 0.02;
+                
+                // Floating motion (up and down)
+                const floatOffset = Math.sin(animationTime * 2) * 15; // Increased amplitude
+                vehicleSprite.y = baseY + floatOffset;
+                
+                // Gentle breathing effect (scale)
+                const scaleOffset = Math.sin(animationTime * 1.5) * 0.05;
+                vehicleSprite.scale.set(baseScale + scaleOffset);
+                
+                // Slight rotation sway
+                const rotationOffset = Math.sin(animationTime * 1.8) * 0.03;
+                vehicleSprite.rotation = rotationOffset;
+
+                requestAnimationFrame(animate);
+            };
+
+            animate();
+        }
+
+        // ===== HIDE AND SEEK ANIMATIONS =====
+        function hideVehicleBehindClouds(onComplete) {
+            if (!vehicleSprite) {
+                if (onComplete) onComplete();
+                return;
+            }
+
+            console.log('🌤️ Vehicle hiding behind clouds...');
+
+            // Create a large fluffy cloud to hide behind (bigger to ensure full coverage)
+            const hidingCloud = new PIXI.Graphics();
+            hidingCloud.beginFill(0xFFFFFF, 0.95); // More opaque
+            // Main cloud body - bigger circles
+            hidingCloud.drawCircle(0, 0, 100);
+            hidingCloud.drawCircle(70, 0, 80);
+            hidingCloud.drawCircle(-70, 0, 80);
+            hidingCloud.drawCircle(35, -40, 65);
+            hidingCloud.drawCircle(-35, -40, 65);
+            hidingCloud.drawCircle(0, -60, 50);
+            // Add a subtle border for better visibility
+            hidingCloud.lineStyle(3, 0xE8E8E8, 1);
+            hidingCloud.drawCircle(0, 0, 100);
+            hidingCloud.endFill();
+
+            // Position cloud off-screen initially
+            hidingCloud.x = app.screen.width + 200;
+            hidingCloud.y = vehicleSprite.y - 20;
+
+            // Add cloud to main stage (not background) so it appears in front of vehicle
+            app.stage.addChild(hidingCloud);
+            console.log('☁️ Hiding cloud added to stage in front of vehicle');
+
+            // Animate cloud moving in to cover vehicle
+            const duration = 1000;
+            const startTime = Date.now();
+            const startX = hidingCloud.x;
+            const targetX = vehicleSprite.x;
+
+            const animateCloudIn = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeProgress = 1 - Math.pow(1 - progress, 3); // Ease out
+
+                hidingCloud.x = startX + (targetX - startX) * easeProgress;
+
+                // Also move vehicle slightly as if being pushed
+                if (progress > 0.7) {
+                    const pushProgress = (progress - 0.7) / 0.3;
+                    vehicleSprite.x = targetX + (pushProgress * 20); // Slight push to the right
+                }
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateCloudIn);
+                } else {
+                    // Vehicle is now hidden behind cloud
+                    console.log('🙈 Vehicle successfully hidden');
+                    
+                    // Store cloud reference for later removal
+                    vehicleSprite.hidingCloud = hidingCloud;
+                    
+                    if (onComplete) onComplete();
+                }
+            };
+
+            animateCloudIn();
+        }
+
+        function revealVehicleFromClouds(onComplete) {
+            if (!vehicleSprite) {
+                if (onComplete) onComplete();
+                return;
+            }
+
+            console.log('🎉 Vehicle revealing from behind clouds...');
+
+            const hidingCloud = vehicleSprite.hidingCloud;
+            if (!hidingCloud) {
+                console.log('⚠️ No hiding cloud found, skipping reveal animation');
+                if (onComplete) onComplete();
+                return;
+            }
+
+            // Dramatic reveal: vehicle bounces out while cloud moves away
+            const duration = 1200;
+            const startTime = Date.now();
+            const vehicleStartX = vehicleSprite.x;
+            const vehicleTargetX = app.screen.width / 2; // Back to center
+            const cloudStartX = hidingCloud.x;
+            const cloudTargetX = -200; // Move cloud off-screen left
+
+            const animateReveal = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Different easing for vehicle and cloud
+                const bounceProgress = progress < 0.8 ? 
+                    1 - Math.pow(1 - (progress / 0.8), 2) : // Ease out quad for first 80%
+                    1 + (Math.sin((progress - 0.8) * 20) * 0.1 * (1 - progress)); // Bounce effect for last 20%
+                
+                const cloudProgress = 1 - Math.pow(1 - progress, 2); // Ease out quad
+
+                // Move vehicle back to center with bounce
+                vehicleSprite.x = vehicleStartX + (vehicleTargetX - vehicleStartX) * bounceProgress;
+                
+                // Add dramatic scale effect during reveal
+                const scaleEffect = 1 + (Math.sin(progress * Math.PI) * 0.2);
+                const currentScale = vehicleSprite.baseScale || 1;
+                vehicleSprite.scale.set(currentScale * scaleEffect);
+
+                // Move cloud away
+                hidingCloud.x = cloudStartX + (cloudTargetX - cloudStartX) * cloudProgress;
+                
+                // Fade out cloud
+                hidingCloud.alpha = 1 - progress;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateReveal);
+                } else {
+                    // Clean up
+                    vehicleSprite.scale.set(currentScale); // Reset scale
+                    vehicleSprite.x = vehicleTargetX; // Ensure final position
+                    
+                    // Remove hiding cloud
+                    if (hidingCloud.parent) {
+                        hidingCloud.parent.removeChild(hidingCloud);
+                    }
+                    vehicleSprite.hidingCloud = null;
+
+                    console.log('🎭 Vehicle successfully revealed!');
+                    if (onComplete) onComplete();
+                }
+            };
+
+            animateReveal();
+        }
+
+        // ===== TEXT-TO-SPEECH =====
+        function speak(text, onComplete) {
+            // Cancel any ongoing speech
+            speechSynth.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // Configure voice settings for kids
+            if (currentVoice) {
+                utterance.voice = currentVoice;
+            }
+            utterance.rate = 0.8; // Slower for kids
+            utterance.pitch = 1.1; // Slightly higher pitch
+            utterance.volume = 0.8;
+
+            utterance.onend = () => {
+                console.log('✅ Speech completed');
+                if (onComplete) onComplete();
+            };
+
+            utterance.onerror = (event) => {
+                console.error('❌ Speech error:', event.error);
+                if (onComplete) onComplete();
+            };
+
+            speechSynth.speak(utterance);
+        }
+
+        // ===== PRESENTATION END =====
+        function endPresentation() {
+            console.log('🎉 Presentation completed!');
+            isPlaying = false;
+
+            // Stop background music
+            stopBackgroundMusic();
+
+            // Show celebration animation
+            showCelebration();
+
+            // Reset UI
+            setTimeout(() => {
+                document.getElementById('startButton').classList.remove('hidden');
+                document.getElementById('currentScene').classList.add('hidden');
+                document.getElementById('startButton').textContent = '🔄 Play Again!';
+                
+                // Clear vehicle
+                if (vehicleSprite) {
+                    app.stage.removeChild(vehicleSprite);
+                    vehicleSprite = null;
+                }
+            }, 3000);
+        }
+
+        function showCelebration() {
+            // Create celebratory elements
+            const celebration = new PIXI.Container();
+            app.stage.addChild(celebration);
+
+            // Create confetti
+            for (let i = 0; i < 20; i++) {
+                const confetti = new PIXI.Graphics();
+                const colors = [0xFF6B6B, 0x4ECDC4, 0xFFD93D, 0x6BCF7F, 0x4D79FF];
+                confetti.beginFill(colors[Math.floor(Math.random() * colors.length)]);
+                confetti.drawRect(0, 0, 10, 10);
+                confetti.endFill();
+
+                confetti.x = Math.random() * app.screen.width;
+                confetti.y = -50;
+                confetti.rotation = Math.random() * Math.PI * 2;
+
+                celebration.addChild(confetti);
+
+                // Animate confetti falling
+                const fallSpeed = 2 + Math.random() * 3;
+                const rotationSpeed = (Math.random() - 0.5) * 0.2;
+
+                const animateConfetti = () => {
+                    confetti.y += fallSpeed;
+                    confetti.rotation += rotationSpeed;
+
+                    if (confetti.y < app.screen.height + 50) {
+                        requestAnimationFrame(animateConfetti);
+                    }
+                };
+
+                setTimeout(() => animateConfetti(), Math.random() * 1000);
+            }
+
+            // Add celebration text
+            const celebText = new PIXI.Text('Great Job! 🎉', {
+                fontFamily: 'Arial',
+                fontSize: 48,
+                fill: 0x2C3E50,
+                fontWeight: 'bold',
+                stroke: 0xFFFFFF,
+                strokeThickness: 4
+            });
+
+            celebText.anchor.set(0.5);
+            celebText.x = app.screen.width / 2;
+            celebText.y = app.screen.height / 2 - 100;
+            celebText.scale.set(0);
+
+            celebration.addChild(celebText);
+
+            // Animate celebration text
+            let scale = 0;
+            const animateText = () => {
+                scale += 0.05;
+                celebText.scale.set(Math.min(scale, 1));
+                
+                if (scale < 1) {
+                    requestAnimationFrame(animateText);
+                }
+            };
+            animateText();
+
+            // Remove celebration after delay
+            setTimeout(() => {
+                app.stage.removeChild(celebration);
+            }, 3000);
+        }
+
+        // ===== STARTUP =====
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 DOM loaded, initializing application...');
+            initializeApp().catch(error => {
+                console.error('❌ Failed to initialize app:', error);
+            });
+        });
+
+        /*
+        ===== NOTES FOR DEVELOPERS =====
+        
+        ASSET PLACEMENT:
+        - Place vehicle images in: assets/vehicles/
+          Examples: car.png, bus.png, train.png, airplane.png, police_car.png, fire_truck.png, ambulance.png
+        
+        - Place background music in: music/
+          Example: classic_soft.mp3
+        
+        - Animation files (if using spine/lottie): assets/vehicles/
+          Examples: car_anim.json, bus_anim.json, etc.
+        
+        CUSTOMIZATION:
+        - To change voices: Modify the preferredVoices array in selectBestVoice()
+        - To adjust speech speed: Change utterance.rate (0.5-2.0)
+        - To change scene timing: Modify timeout values in playNextLine()
+        - To add new vehicles: Update vehicleConfigs in createVehicleSprite()
+        
+        REPLACING PLACEHOLDER GRAPHICS:
+        - Replace createVehicleSprite() with PIXI.Loader to load actual images
+        - Add proper sprite animation using PIXI.AnimatedSprite for moving parts
+        - Consider using Spine animations for more complex vehicle movements
+        
+        ADDING BACKGROUND MUSIC:
+        - Uncomment and implement background music loading
+        - Use PIXI.sound or HTML5 Audio API
+        - Ensure music loops and has appropriate volume for narration
+        
+        FUTURE ENHANCEMENTS:
+        - Add interactive elements (click to repeat words)
+        - Include sound effects for each vehicle
+        - Add different backgrounds per scene
+        - Implement scene transitions (slide, fade, etc.)
+        - Add subtitles option
+        - Include multiple language support
+        */
+        
+    </script>
+</body>
+</html>

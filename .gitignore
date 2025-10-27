@@ -1,0 +1,51 @@
+# Node modules (if we add any later)
+node_modules/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Runtime files
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+tmp/
+temp/
+
+# Cache directories
+.cache/
+.npm/
+.eslintcache
+
+# Environment variables (if we add any)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs (if we add build process later)
+dist/
+build/
+out/
+
+# Python cache (from our generator script)
+__pycache__/
+*.pyc
+*.pyo

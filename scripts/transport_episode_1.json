@@ -1,0 +1,83 @@
+{
+  "title": "Learn Vehicles for Kids",
+  "background_music": "music/classic_soft.mp3",
+  "scenes": [
+    {
+      "id": "car_intro",
+      "object": "car",
+      "image": "assets/vehicles/car.png",
+      "text": [
+        "Car",
+        "Where is the car?",
+        "Here is the car!",
+        "Goodbye car!"
+      ]
+    },
+    {
+      "id": "bus_intro",
+      "object": "bus",
+      "image": "assets/vehicles/bus.png",
+      "text": [
+        "Bus",
+        "Where is the bus?",
+        "Here is the bus!",
+        "Goodbye bus!"
+      ]
+    },
+    {
+      "id": "train_intro",
+      "object": "train",
+      "image": "assets/vehicles/train.png",
+      "text": [
+        "Train",
+        "Where is the train?",
+        "Here is the train!",
+        "Goodbye train!"
+      ]
+    },
+    {
+      "id": "airplane_intro",
+      "object": "airplane",
+      "image": "assets/vehicles/airplane.png",
+      "text": [
+        "Airplane",
+        "Where is the airplane?",
+        "Here is the airplane!",
+        "Goodbye airplane!"
+      ]
+    },
+    {
+      "id": "police_car_intro",
+      "object": "police car",
+      "image": "assets/vehicles/police_car.png",
+      "text": [
+        "Police car",
+        "Where is the police car?",
+        "Here is the police car!",
+        "Goodbye police car!"
+      ]
+    },
+    {
+      "id": "fire_truck_intro",
+      "object": "fire truck",
+      "image": "assets/vehicles/fire_truck.png",
+      "text": [
+        "Fire truck",
+        "Where is the fire truck?",
+        "Here is the fire truck!",
+        "Goodbye fire truck!"
+      ]
+    },
+    {
+      "id": "ambulance_intro",
+      "object": "ambulance",
+      "image": "assets/vehicles/ambulance.png",
+      "text": [
+        "Ambulance",
+        "Where is the ambulance?",
+        "Here is the ambulance!",
+        "Goodbye ambulance!"
+      ]
+    }
+  ]
+}
