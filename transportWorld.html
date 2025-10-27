@@ -92,9 +92,18 @@
 <body>
     <h1 id="title">🚗 Transport World 🚂</h1>
     <p style="color: #2C3E50; text-align: center; margin: 5px;">
-        <strong>Instructions:</strong> 1) Click "Start Adventure!" 2) Allow audio permissions 3) Watch the animated vehicles!
+        <strong>Instructions:</strong> 1) Choose episode 2) Click "Start Adventure!" 3) Allow audio permissions 4) Watch the animated vehicles!
         <br><small>🎵 Add classic_soft.mp3 to /music/ folder for background music | 💡 Open console (F12) for debug info</small>
     </p>
+    
+    <div style="text-align: center; margin: 10px;">
+        <label for="episodeSelect" style="color: #2C3E50; font-weight: bold; margin-right: 10px;">Choose Episode:</label>
+        <select id="episodeSelect" style="padding: 8px 15px; font-size: 16px; border-radius: 10px; border: 2px solid #4ECDC4; background: white;">
+            <option value="scripts/transport_episode_1.json">🚗 Quick Episode (7 vehicles)</option>
+            <option value="scripts/transport_episode_complete.json">🎬 Complete Episode (with music & story)</option>
+        </select>
+    </div>
+
     <div id="gameContainer">
         <button id="startButton">▶️ Start Adventure!</button>
         <div id="currentScene" class="hidden">Loading...</div>
@@ -419,7 +428,13 @@
         // ===== SCRIPT LOADING =====
         async function loadScript() {
             try {
-                const response = await fetch('scripts/transport_episode_1.json');
+                // Get selected episode from dropdown
+                const episodeSelect = document.getElementById('episodeSelect');
+                const selectedEpisode = episodeSelect.value;
+                
+                console.log('📜 Loading episode:', selectedEpisode);
+                
+                const response = await fetch(selectedEpisode);
                 if (!response.ok) {
                     throw new Error(`Failed to load script: ${response.status}`);
                 }
@@ -435,7 +450,9 @@
                 return true;
             } catch (error) {
                 console.error('❌ Error loading script:', error);
-                alert('Could not load the video script. Please check that scripts/transport_episode_1.json exists.');
+                const episodeSelect = document.getElementById('episodeSelect');
+                const selectedEpisode = episodeSelect.value;
+                alert(`Could not load the episode script: ${selectedEpisode}. Please check that the file exists.`);
                 return false;
             }
         }
@@ -483,20 +500,83 @@
             }
 
             const scene = currentScript.scenes[currentSceneIndex];
-            console.log(`🎭 Playing scene: ${scene.id}`);
+            console.log(`🎭 Playing scene: ${scene.id} (type: ${scene.type || 'vehicle'})`);
 
             // Update scene indicator
+            const sceneLabel = scene.object || scene.type || 'Scene';
             document.getElementById('currentScene').textContent = 
-                `Scene ${currentSceneIndex + 1}/${currentScript.scenes.length}: ${scene.object}`;
+                `Scene ${currentSceneIndex + 1}/${currentScript.scenes.length}: ${sceneLabel}`;
 
-            // Clear previous vehicle
-            if (vehicleSprite) {
-                app.stage.removeChild(vehicleSprite);
-                vehicleSprite = null;
+            // Handle different scene types
+            if (scene.type === 'music_only') {
+                // Music-only scene - no vehicle, just wait
+                console.log('🎵 Music-only scene');
+                const duration = scene.duration || 2000;
+                setTimeout(() => {
+                    currentSceneIndex++;
+                    playCurrentScene();
+                }, duration);
+                return;
             }
 
-            // Create vehicle sprite from image
-            await createVehicleSprite(scene);
+            if (scene.type === 'announcement' || scene.type === 'review' || scene.type === 'finale') {
+                // Text-only scenes without vehicles
+                console.log('📢 Announcement/Review scene');
+                
+                // Clear previous vehicle
+                if (vehicleSprite) {
+                    app.stage.removeChild(vehicleSprite);
+                    vehicleSprite = null;
+                }
+
+                // Play text lines for this scene
+                currentTextIndex = 0;
+                playNextLine(scene);
+                return;
+            }
+
+            if (scene.type === 'group_scene') {
+                // Show multiple vehicles or special group scene
+                console.log('👥 Group scene');
+                
+                // For now, treat as announcement - can be enhanced later
+                if (vehicleSprite) {
+                    app.stage.removeChild(vehicleSprite);
+                    vehicleSprite = null;
+                }
+
+                currentTextIndex = 0;
+                playNextLine(scene);
+                return;
+            }
+
+            // Regular vehicle scene
+            // For hide_seek scenes, keep the existing vehicle if it's the same object
+            const previousScene = currentScript.scenes[currentSceneIndex - 1];
+            const shouldKeepVehicle = scene.id && scene.id.includes('hide_seek') && 
+                                    vehicleSprite && 
+                                    scene.object;
+            
+            console.log('🔄 Vehicle persistence check:');
+            console.log('  - Current scene:', scene.id, 'object:', scene.object);
+            console.log('  - Previous scene:', previousScene?.id, 'object:', previousScene?.object);
+            console.log('  - Has vehicleSprite:', !!vehicleSprite);
+            console.log('  - Should keep vehicle:', shouldKeepVehicle);
+
+            if (!shouldKeepVehicle) {
+                // Clear previous vehicle only if not a continuing hide_seek scene
+                if (vehicleSprite) {
+                    app.stage.removeChild(vehicleSprite);
+                    vehicleSprite = null;
+                }
+
+                // Create vehicle sprite from image
+                if (scene.image) {
+                    await createVehicleSprite(scene);
+                }
+            } else {
+                console.log('🔄 Keeping existing vehicle for hide_seek scene');
+            }
 
             // Play text lines for this scene
             currentTextIndex = 0;
@@ -653,14 +733,66 @@
             animate();
         }
 
+        function animateVehicleExit(callback) {
+            if (!vehicleSprite) {
+                if (callback) callback();
+                return;
+            }
+
+            console.log('🎬 Starting vehicle exit animation');
+
+            // Get current position and scale
+            const startX = vehicleSprite.x;
+            const startScale = vehicleSprite.scale.x;
+            const targetX = app.screen.width + 200; // Exit to the right
+            const duration = 1500; // Same duration as entrance
+            const startTime = Date.now();
+
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Use easing for smooth exit
+                const easeProgress = Math.pow(progress, 2); // Ease in quadratic - starts slow, speeds up
+                
+                // Slide out to the right
+                vehicleSprite.x = startX + (targetX - startX) * easeProgress;
+                
+                // Scale down slightly as it exits
+                vehicleSprite.scale.set(startScale * (1 - progress * 0.3));
+                
+                // Slight rotation as it exits
+                vehicleSprite.rotation = progress * 0.2;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    console.log('✅ Vehicle exit animation complete');
+                    if (callback) callback();
+                }
+            };
+
+            animate();
+        }
+
         function playNextLine(scene) {
             if (currentTextIndex >= scene.text.length) {
-                console.log('📋 Scene completed, moving to next scene in 1.5 seconds');
-                // Scene completed, move to next scene
+                console.log('📋 Scene completed, moving to next scene');
+                
+                // Variable timing based on scene type for better flow
+                let sceneDelay = 1500; // Default
+                if (scene.type === 'music_only') {
+                    sceneDelay = 500; // Quick transition for music
+                } else if (scene.type === 'announcement' || scene.type === 'review') {
+                    sceneDelay = 1000; // Medium delay for text scenes  
+                } else if (scene.object) {
+                    sceneDelay = 1800; // Longer delay for vehicle scenes
+                }
+                
                 setTimeout(() => {
                     currentSceneIndex++;
                     playCurrentScene();
-                }, 1500);
+                }, sceneDelay);
                 return;
             }
 
@@ -668,20 +800,24 @@
             console.log(`🗣️ Speaking line ${currentTextIndex + 1}/${scene.text.length}: "${text}"`);
 
             // Update scene indicator to show current text
+            const sceneLabel = scene.object || scene.type || 'Scene';
             document.getElementById('currentScene').textContent = 
-                `${scene.object.toUpperCase()}: "${text}" (${currentTextIndex + 1}/${scene.text.length})`;
+                `${sceneLabel.toUpperCase()}: "${text}" (${currentTextIndex + 1}/${scene.text.length})`;
 
-            // Handle special interactions based on text content
-            if (text.toLowerCase().includes('where is')) {
+            // Handle special interactions based on text content - only if we have a vehicle
+            const textLower = text.toLowerCase();
+            console.log('🔍 Checking text:', text, 'vehicleSprite exists:', !!vehicleSprite, 'scene.object:', scene.object);
+            
+            if (textLower.includes('where is') && vehicleSprite && scene.object) {
                 // Before asking "where is", hide the vehicle
-                console.log('🙈 Hiding vehicle for "where is" question');
+                console.log('🙈 Hiding vehicle for "where is" question:', text);
                 hideVehicleBehindClouds(() => {
                     speak(text, () => {
                         currentTextIndex++;
-                        setTimeout(() => playNextLine(scene), 1200); // Longer pause for suspense
+                        setTimeout(() => playNextLine(scene), 1500); // Longer pause for suspense
                     });
                 });
-            } else if (text.toLowerCase().includes('here is')) {
+            } else if (textLower.includes('here is') && vehicleSprite && scene.object) {
                 // For "here is", reveal the vehicle dramatically
                 console.log('🎭 Revealing vehicle for "here is" answer');
                 revealVehicleFromClouds(() => {
@@ -694,15 +830,35 @@
                         setTimeout(() => playNextLine(scene), 800);
                     });
                 });
+            } else if (textLower.includes('goodbye') && vehicleSprite && scene.object) {
+                // For "goodbye", make the vehicle exit off screen
+                console.log('👋 Vehicle saying goodbye - animating exit');
+                speak(text, () => {
+                    console.log('✅ Goodbye speech completed, starting exit animation');
+                    animateVehicleExit(() => {
+                        currentTextIndex++;
+                        setTimeout(() => playNextLine(scene), 500);
+                    });
+                });
             } else {
                 // Normal speech for other lines
                 speak(text, () => {
-                    console.log('✅ Speech completed, starting idle animation');
-                    if (vehicleSprite) {
+                    console.log('✅ Speech completed');
+                    if (vehicleSprite && scene.object && !vehicleSprite.isHiding) {
+                        console.log('🎭 Starting idle animation');
                         addVehicleIdleAnimation();
                     }
                     currentTextIndex++;
-                    setTimeout(() => playNextLine(scene), 800);
+                    
+                    // Variable timing based on content
+                    let speechDelay = 800;
+                    if (text.toLowerCase().includes('goodbye')) {
+                        speechDelay = 1200; // Longer pause for goodbyes
+                    } else if (scene.type === 'review') {
+                        speechDelay = 600; // Faster for lists
+                    }
+                    
+                    setTimeout(() => playNextLine(scene), speechDelay);
                 });
             }
         }
@@ -718,7 +874,7 @@
             let animationTime = 0;
 
             const animate = () => {
-                if (!vehicleSprite || !isPlaying) return;
+                if (!vehicleSprite || !isPlaying || vehicleSprite.isHiding) return;
 
                 animationTime += 0.02;
                 
@@ -743,37 +899,44 @@
         // ===== HIDE AND SEEK ANIMATIONS =====
         function hideVehicleBehindClouds(onComplete) {
             if (!vehicleSprite) {
+                console.warn('⚠️ No vehicle sprite to hide');
                 if (onComplete) onComplete();
                 return;
             }
 
             console.log('🌤️ Vehicle hiding behind clouds...');
 
-            // Create a large fluffy cloud to hide behind (bigger to ensure full coverage)
+            // Create a natural fluffy cloud like the background clouds
             const hidingCloud = new PIXI.Graphics();
-            hidingCloud.beginFill(0xFFFFFF, 0.95); // More opaque
-            // Main cloud body - bigger circles
-            hidingCloud.drawCircle(0, 0, 100);
-            hidingCloud.drawCircle(70, 0, 80);
-            hidingCloud.drawCircle(-70, 0, 80);
-            hidingCloud.drawCircle(35, -40, 65);
-            hidingCloud.drawCircle(-35, -40, 65);
-            hidingCloud.drawCircle(0, -60, 50);
-            // Add a subtle border for better visibility
-            hidingCloud.lineStyle(3, 0xE8E8E8, 1);
-            hidingCloud.drawCircle(0, 0, 100);
-            hidingCloud.endFill();
+            hidingCloud.beginFill(0xFFFFFF, 0.8); // Same opacity as background clouds
+            
+            // Create a moderately sized cloud - just enough to hide vehicle
+            hidingCloud.drawCircle(0, 0, 65);      // Main body
+            hidingCloud.drawCircle(50, 0, 50);     // Right puff
+            hidingCloud.drawCircle(-50, 0, 50);    // Left puff  
+            hidingCloud.drawCircle(30, -35, 40);   // Top right
+            hidingCloud.drawCircle(-30, -35, 40);  // Top left
+            hidingCloud.drawCircle(0, -50, 30);    // Top center
+            hidingCloud.drawCircle(20, 30, 25);    // Bottom right
+            hidingCloud.drawCircle(-20, 30, 25);   // Bottom left
+            hidingCloud.endFill(); // No borders - clean like background clouds
 
             // Position cloud off-screen initially
-            hidingCloud.x = app.screen.width + 200;
-            hidingCloud.y = vehicleSprite.y - 20;
+            hidingCloud.x = app.screen.width + 150; // Fixed offset for cloud positioning
+            hidingCloud.y = vehicleSprite.y;
 
-            // Add cloud to main stage (not background) so it appears in front of vehicle
+            // Ensure cloud is on top of vehicle by adding it after the vehicle
+            // and setting a higher z-index if needed
             app.stage.addChild(hidingCloud);
-            console.log('☁️ Hiding cloud added to stage in front of vehicle');
+            
+            // Make sure cloud is in front by reordering
+            const vehicleIndex = app.stage.getChildIndex(vehicleSprite);
+            app.stage.setChildIndex(hidingCloud, vehicleIndex + 1);
+            
+            console.log('☁️ Natural hiding cloud added in front of vehicle');
 
             // Animate cloud moving in to cover vehicle
-            const duration = 1000;
+            const duration = 1200; // Slightly longer for better effect
             const startTime = Date.now();
             const startX = hidingCloud.x;
             const targetX = vehicleSprite.x;
@@ -785,17 +948,14 @@
 
                 hidingCloud.x = startX + (targetX - startX) * easeProgress;
 
-                // Also move vehicle slightly as if being pushed
-                if (progress > 0.7) {
-                    const pushProgress = (progress - 0.7) / 0.3;
-                    vehicleSprite.x = targetX + (pushProgress * 20); // Slight push to the right
-                }
+                // Stop vehicle idle animation while hiding
+                vehicleSprite.isHiding = true;
 
                 if (progress < 1) {
                     requestAnimationFrame(animateCloudIn);
                 } else {
-                    // Vehicle is now hidden behind cloud
-                    console.log('🙈 Vehicle successfully hidden');
+                    // Vehicle is now completely hidden behind cloud
+                    console.log('🙈 Vehicle successfully hidden behind natural cloud');
                     
                     // Store cloud reference for later removal
                     vehicleSprite.hidingCloud = hidingCloud;
@@ -809,6 +969,7 @@
 
         function revealVehicleFromClouds(onComplete) {
             if (!vehicleSprite) {
+                console.warn('⚠️ No vehicle sprite to reveal');
                 if (onComplete) onComplete();
                 return;
             }
@@ -818,57 +979,62 @@
             const hidingCloud = vehicleSprite.hidingCloud;
             if (!hidingCloud) {
                 console.log('⚠️ No hiding cloud found, skipping reveal animation');
+                // Clear hiding state anyway
+                vehicleSprite.isHiding = false;
                 if (onComplete) onComplete();
                 return;
             }
 
             // Dramatic reveal: vehicle bounces out while cloud moves away
-            const duration = 1200;
+            const duration = 1400; // Slightly longer for better dramatic effect
             const startTime = Date.now();
             const vehicleStartX = vehicleSprite.x;
             const vehicleTargetX = app.screen.width / 2; // Back to center
             const cloudStartX = hidingCloud.x;
-            const cloudTargetX = -200; // Move cloud off-screen left
+            const cloudTargetX = -300; // Move cloud further off-screen
 
             const animateReveal = () => {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 
                 // Different easing for vehicle and cloud
-                const bounceProgress = progress < 0.8 ? 
-                    1 - Math.pow(1 - (progress / 0.8), 2) : // Ease out quad for first 80%
-                    1 + (Math.sin((progress - 0.8) * 20) * 0.1 * (1 - progress)); // Bounce effect for last 20%
+                const bounceProgress = progress < 0.7 ? 
+                    1 - Math.pow(1 - (progress / 0.7), 2) : // Ease out quad for first 70%
+                    1 + (Math.sin((progress - 0.7) * 15) * 0.15 * (1 - progress)); // Bounce effect for last 30%
                 
                 const cloudProgress = 1 - Math.pow(1 - progress, 2); // Ease out quad
 
-                // Move vehicle back to center with bounce
+                // Move vehicle back to center with dramatic bounce
                 vehicleSprite.x = vehicleStartX + (vehicleTargetX - vehicleStartX) * bounceProgress;
                 
-                // Add dramatic scale effect during reveal
-                const scaleEffect = 1 + (Math.sin(progress * Math.PI) * 0.2);
+                // Add dramatic scale effect during reveal - more pronounced
+                const scaleEffect = 1 + (Math.sin(progress * Math.PI * 1.5) * 0.3);
                 const currentScale = vehicleSprite.baseScale || 1;
-                vehicleSprite.scale.set(currentScale * scaleEffect);
+                vehicleSprite.scale.set(Math.max(currentScale * scaleEffect, currentScale * 0.8)); // Don't let it get too small
 
-                // Move cloud away
+                // Move cloud away faster
                 hidingCloud.x = cloudStartX + (cloudTargetX - cloudStartX) * cloudProgress;
                 
-                // Fade out cloud
-                hidingCloud.alpha = 1 - progress;
+                // Fade out cloud more gradually at first, then faster
+                const fadeProgress = progress < 0.5 ? progress * 0.4 : 0.2 + (progress - 0.5) * 1.6;
+                hidingCloud.alpha = Math.max(0, 1 - fadeProgress);
 
                 if (progress < 1) {
                     requestAnimationFrame(animateReveal);
                 } else {
                     // Clean up
-                    vehicleSprite.scale.set(currentScale); // Reset scale
+                    const finalScale = vehicleSprite.baseScale || 1;
+                    vehicleSprite.scale.set(finalScale); // Reset to proper scale
                     vehicleSprite.x = vehicleTargetX; // Ensure final position
+                    vehicleSprite.isHiding = false; // Clear hiding state
                     
-                    // Remove hiding cloud
+                    // Remove hiding cloud completely
                     if (hidingCloud.parent) {
                         hidingCloud.parent.removeChild(hidingCloud);
                     }
                     vehicleSprite.hidingCloud = null;
 
-                    console.log('🎭 Vehicle successfully revealed!');
+                    console.log('🎭 Vehicle successfully revealed with dramatic effect!');
                     if (onComplete) onComplete();
                 }
             };

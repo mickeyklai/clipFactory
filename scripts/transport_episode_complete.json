@@ -1,0 +1,309 @@
+{
+  "title": "Transport World Adventure - Complete Episode",
+  "background_music": "music/classic_soft.mp3",
+  "scenes": [
+    {
+      "id": "intro_music",
+      "type": "music_only",
+      "text": ["Welcome to Transport World!"],
+      "duration": 2000
+    },
+    {
+      "id": "vehicles_intro",
+      "type": "announcement",
+      "text": ["Vehicles", "Let's meet the vehicles!"],
+      "duration": 1500
+    },
+    {
+      "id": "music_break_1",
+      "type": "music_only", 
+      "text": [""],
+      "duration": 1000
+    },
+    {
+      "id": "car_introduction",
+      "object": "car",
+      "image": "assets/vehicles/car.png",
+      "text": ["Car", "This is a car", "The car drives on roads"]
+    },
+    {
+      "id": "music_break_2",
+      "type": "music_only",
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "car_hide_seek",
+      "object": "car", 
+      "image": "assets/vehicles/car.png",
+      "text": ["Where is the car?", "Here is the car!", "The car says beep beep!"]
+    },
+    {
+      "id": "music_break_3",
+      "type": "music_only",
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "car_goodbye",
+      "object": "car",
+      "image": "assets/vehicles/car.png", 
+      "text": ["Goodbye car!", "The car drives away"]
+    },
+    {
+      "id": "music_break_4",
+      "type": "music_only",
+      "text": [""],
+      "duration": 1000
+    },
+    {
+      "id": "bus_introduction",
+      "object": "bus",
+      "image": "assets/vehicles/bus.png",
+      "text": ["Bus", "This is a big yellow bus", "The bus carries many children"]
+    },
+    {
+      "id": "music_break_5",
+      "type": "music_only",
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "bus_hide_seek",
+      "object": "bus",
+      "image": "assets/vehicles/bus.png", 
+      "text": ["Where is the bus?", "Here is the bus!", "All aboard the bus!"]
+    },
+    {
+      "id": "music_break_6",
+      "type": "music_only",
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "bus_goodbye",
+      "object": "bus",
+      "image": "assets/vehicles/bus.png",
+      "text": ["Goodbye bus!", "The bus drives to school"]
+    },
+    {
+      "id": "music_break_7",
+      "type": "music_only",
+      "text": [""],
+      "duration": 1000
+    },
+    {
+      "id": "train_introduction", 
+      "object": "train",
+      "image": "assets/vehicles/train.png",
+      "text": ["Train", "Choo choo train!", "The train runs on railroad tracks"]
+    },
+    {
+      "id": "music_break_8",
+      "type": "music_only",
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "train_hide_seek",
+      "object": "train",
+      "image": "assets/vehicles/train.png",
+      "text": ["Where is the train?", "Here is the train!", "Choo choo goes the train!"]
+    },
+    {
+      "id": "music_break_9", 
+      "type": "music_only",
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "train_goodbye",
+      "object": "train",
+      "image": "assets/vehicles/train.png",
+      "text": ["Goodbye train!", "The train goes to the station"]
+    },
+    {
+      "id": "music_break_10",
+      "type": "music_only",
+      "text": [""],
+      "duration": 1000
+    },
+    {
+      "id": "airplane_introduction",
+      "object": "airplane", 
+      "image": "assets/vehicles/airplane.png",
+      "text": ["Airplane", "The airplane flies high in the sky", "Zoom goes the airplane!"]
+    },
+    {
+      "id": "music_break_11",
+      "type": "music_only",
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "airplane_hide_seek",
+      "object": "airplane",
+      "image": "assets/vehicles/airplane.png",
+      "text": ["Where is the airplane?", "Here is the airplane!", "The airplane flies through clouds"]
+    },
+    {
+      "id": "music_break_12",
+      "type": "music_only", 
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "airplane_goodbye",
+      "object": "airplane",
+      "image": "assets/vehicles/airplane.png",
+      "text": ["Goodbye airplane!", "The airplane flies far away"]
+    },
+    {
+      "id": "music_break_13",
+      "type": "music_only",
+      "text": [""],
+      "duration": 1000
+    },
+    {
+      "id": "police_car_introduction",
+      "object": "police car",
+      "image": "assets/vehicles/police_car.png", 
+      "text": ["Police car", "The police car helps keep us safe", "Wee-ooo wee-ooo goes the siren"]
+    },
+    {
+      "id": "music_break_14",
+      "type": "music_only",
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "police_car_hide_seek",
+      "object": "police car",
+      "image": "assets/vehicles/police_car.png",
+      "text": ["Where is the police car?", "Here is the police car!", "The police car has flashing lights"]
+    },
+    {
+      "id": "music_break_15",
+      "type": "music_only",
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "police_car_goodbye", 
+      "object": "police car",
+      "image": "assets/vehicles/police_car.png",
+      "text": ["Goodbye police car!", "Thank you for keeping us safe"]
+    },
+    {
+      "id": "music_break_16",
+      "type": "music_only",
+      "text": [""],
+      "duration": 1000
+    },
+    {
+      "id": "fire_truck_introduction",
+      "object": "fire truck",
+      "image": "assets/vehicles/fire_truck.png",
+      "text": ["Fire truck", "The big red fire truck", "The fire truck helps put out fires"]
+    },
+    {
+      "id": "music_break_17",
+      "type": "music_only",
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "fire_truck_hide_seek",
+      "object": "fire truck",
+      "image": "assets/vehicles/fire_truck.png",
+      "text": ["Where is the fire truck?", "Here is the fire truck!", "The fire truck has a long ladder"]
+    },
+    {
+      "id": "music_break_18", 
+      "type": "music_only",
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "fire_truck_goodbye",
+      "object": "fire truck", 
+      "image": "assets/vehicles/fire_truck.png",
+      "text": ["Goodbye fire truck!", "The fire truck rushes to help"]
+    },
+    {
+      "id": "music_break_19",
+      "type": "music_only",
+      "text": [""],
+      "duration": 1000
+    },
+    {
+      "id": "ambulance_introduction",
+      "object": "ambulance",
+      "image": "assets/vehicles/ambulance.png",
+      "text": ["Ambulance", "The white ambulance helps sick people", "The ambulance rushes to the hospital"]
+    },
+    {
+      "id": "music_break_20",
+      "type": "music_only",
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "ambulance_hide_seek",
+      "object": "ambulance",
+      "image": "assets/vehicles/ambulance.png", 
+      "text": ["Where is the ambulance?", "Here is the ambulance!", "The ambulance has a red cross"]
+    },
+    {
+      "id": "music_break_21",
+      "type": "music_only",
+      "text": [""],
+      "duration": 800
+    },
+    {
+      "id": "ambulance_goodbye",
+      "object": "ambulance",
+      "image": "assets/vehicles/ambulance.png",
+      "text": ["Goodbye ambulance!", "Thank you for helping people"]
+    },
+    {
+      "id": "music_break_22",
+      "type": "music_only",
+      "text": [""],
+      "duration": 1500
+    },
+    {
+      "id": "all_vehicles_review",
+      "type": "review",
+      "text": ["Let's remember all our vehicles!", "Car", "Bus", "Train", "Airplane", "Police car", "Fire truck", "Ambulance"]
+    },
+    {
+      "id": "music_break_23", 
+      "type": "music_only",
+      "text": [""],
+      "duration": 1000
+    },
+    {
+      "id": "vehicles_together",
+      "type": "group_scene",
+      "text": ["All the vehicles together!", "They all help us travel", "They all have special jobs"]
+    },
+    {
+      "id": "music_break_24",
+      "type": "music_only",
+      "text": [""],
+      "duration": 1000
+    },
+    {
+      "id": "final_goodbye",
+      "type": "finale",
+      "text": ["Goodbye all vehicles!", "Goodbye everyone!", "Thanks for learning with us!", "See you next time in Transport World!"]
+    },
+    {
+      "id": "music_outro",
+      "type": "music_only",
+      "text": ["The End"],
+      "duration": 3000
+    }
+  ]
+}
